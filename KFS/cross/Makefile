@@ -16,21 +16,25 @@ GCC_URL         := https://ftp.gnu.org/gnu/gcc/gcc-$(GCC_V)/$(GCC_TARBALL)
 
 $(BUILD_DIR)/$(BINUTILS_TARBALL):
 	wget -P $(BUILD_DIR) $(BINUTILS_URL)
+
+$(BUILD_DIR)/$(BINUTILS_DIR):
+	mkdir -p $(BUILD_DIR)/$(BINUTILS_DIR)
+	tar xf $(BUILD_DIR)/$(BINUTILS_TARBALL) -C $(BUILD_DIR)/$(BINUTILS_DIR) --strip-components=1
 	
 $(BUILD_DIR)/$(GCC_TARBALL):
 	wget -P $(BUILD_DIR) $(GCC_URL)
 
-binutils: $(BUILD_DIR)/$(BINUTILS_TARBALL)
-	mkdir -p $(BUILD_DIR)/$(BINUTILS_DIR)
-	tar xf $(BUILD_DIR)/$(BINUTILS_TARBALL) -C $(BUILD_DIR)/$(BINUTILS_DIR) --strip-components=1
+$(BUILD_DIR)/$(GCC_DIR):
+	mkdir -p $(BUILD_DIR)/$(GCC_DIR)
+	tar xf $(BUILD_DIR)/$(GCC_TARBALL) -C $(BUILD_DIR)/$(GCC_DIR) --strip-components=1
+
+binutils: $(BUILD_DIR)/$(BINUTILS_TARBALL) $(BUILD_DIR)/$(BINUTILS_DIR)
 	cd $(BUILD_DIR)/$(BINUTILS_DIR) && ./configure --target=$(TARGET) --prefix=$(PREFIX) --with-sysroot --disable-nls --disable-werror
 	make -C $(BUILD_DIR)/$(BINUTILS_DIR) -j8
 	make -C $(BUILD_DIR)/$(BINUTILS_DIR) install
 
-gcc: $(BUILD_DIR)/$(GCC_TARBALL)
-	mkdir -p $(BUILD_DIR)/$(GCC_DIR)
-	tar xf $(BUILD_DIR)/$(GCC_TARBALL) -C $(BUILD_DIR)/$(GCC_DIR) --strip-components=1
-	cd $(BUILD_DIR)/$(GCC_DIR) && ./configure --target=$(TARGET) --prefix=$(PREFIX) --disable-nls --enable-languages=c --without-headers
+gcc: $(BUILD_DIR)/$(GCC_TARBALL) $(BUILD_DIR)/$(GCC_DIR)
+	cd $(BUILD_DIR)/$(GCC_DIR) && ./configure --target=$(TARGET) --prefix=$(PREFIX) --disable-nls --enable-languages=c,c++ --without-headers
 	make -C $(BUILD_DIR)/$(GCC_DIR) -j8 all-gcc
 	make -C $(BUILD_DIR)/$(GCC_DIR) -j8 all-target-libgcc
 	make -C $(BUILD_DIR)/$(GCC_DIR) install-gcc
