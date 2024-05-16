@@ -18,6 +18,7 @@ cd build-binutils
 make -j8
 make install
 cd ..
+echo "[>>>] BINUTILS DONE"
 
 #download and extract gcc
 wget https://ftp.gnu.org/gnu/gcc/gcc-14.1.0/gcc-14.1.0.tar.gz
@@ -26,11 +27,12 @@ tar xf gcc-14.1.0.tar.gz
 #build gcc
 mkdir build-gcc
 cd build-gcc
-../gcc.14.1.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
+../gcc-14.1.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
 make -j8 all-gcc
 make -j8 all-target-libgcc
 make install-gcc
 make install-target-libgcc
+echo "[>>>] GCC DONE"
 cd $WD
 
 #create envsetup.sh
