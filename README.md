@@ -8,6 +8,15 @@ KFS (Kernel From Scratch) is a personal project aimed at building a simple x86 k
 |-----------|-------------|
 | kfs-1     | Hello World kernel booting with Grub. |
 
+## Details
+
+### KFS-1
+
+A "Hello world" kernel, bootable with grub.
+I added basic keyboard handling by reading port 0x60. Later, I'll do that properly by handling interrupts, but I want to set up the GDT before implementing the IDT.
+This basic keyboard management allows me to type, scroll, switch between different terminal with CTRL+1-9.
+I also added some basic libc function implemented myself, and a bery simple printf() to simplify debug.
+
 ## References
 
 - [OSDev Wiki](https://wiki.osdev.org/Main_Page): A valuable resource for learning about operating system development.

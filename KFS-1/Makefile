@@ -14,6 +14,7 @@ LIBDIR=$(EXEC_PREFIX)/lib
 INCLUDEDIR=$(PREFIX)/include
 SYSROOT=$(PWD)/sysroot
 ISODIR=$(PWD)/isodir
+ISO=ofs.iso
 
 # Flags
 CFLAGS=-O2 -g
@@ -48,7 +49,7 @@ clean:
 	done
 	rm -rf $(SYSROOT)
 	rm -rf $(ISODIR)
-	rm -rf ofs.iso
+	rm -rf $(ISO)
 
 # Install headers
 .PHONY: headers
@@ -58,10 +59,7 @@ headers:
 		(cd $$PROJECT && CC="$(CC)" DESTDIR="$(SYSROOT)" SYSROOT="$(SYSROOT)" $(MAKE) install-headers); \
 	done
 
-# Create ISO
-.PHONY: iso
-iso: build
-	mkdir -p $(ISODIR)/boot
+$(ISO): build
 	mkdir -p $(ISODIR)/boot/grub
 	cp $(SYSROOT)/boot/ofs.kernel $(ISODIR)/boot/ofs.kernel
 	echo 'menuentry "ofs" {' > $(ISODIR)/boot/grub/grub.cfg
@@ -71,7 +69,7 @@ iso: build
 
 # Run in QEMU
 .PHONY: qemu
-qemu: iso
+qemu: $(ISO)
 	qemu-system-$(shell ./target-triplet-to-arch.sh $(HOST)) -cdrom ofs.iso
 
 # Build cross-compiler

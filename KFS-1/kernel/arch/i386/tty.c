@@ -16,10 +16,14 @@ static uint16_t *const VGA_MEMORY = (uint16_t *)0xB8000;
 static uint16_t const VGA_PORT_COMMAND = (uint16_t)0x3D4;
 static uint16_t const VGA_PORT_DATA = (uint16_t)0x3D5;
 
+struct term ttys[9];
+size_t current_tty = 0;
+size_t n_tty = 9;
 size_t terminal_row;
 size_t terminal_column;
 uint8_t terminal_color;
 uint16_t *terminal_buffer;
+uint8_t ctrl_pressed = 0;
 char keycode_to_ascii[] = {
     0,   0,   '1',  '2', '3', '4',  '5',  '6',
     '7', '8', '9',  '0', '-', '=',  '\b', // 0x00 - 0x0F
@@ -41,14 +45,39 @@ void terminal_setcursor(void) {
   outb(VGA_PORT_DATA, (uint8_t)(position & 0xFF));
 }
 
+void terminal_switch(size_t new_tty) {
+  if (new_tty < 0 || new_tty >= n_tty || new_tty == current_tty)
+    return;
+  memcpy(&(ttys[current_tty].buffer), VGA_MEMORY, VGA_WIDTH * VGA_HEIGHT);
+  memcpy(VGA_MEMORY, &(ttys[new_tty].buffer), VGA_WIDTH * VGA_HEIGHT);
+  ttys[current_tty].col = terminal_column;
+  ttys[current_tty].row = terminal_row;
+  terminal_column = ttys[new_tty].col;
+  terminal_row = ttys[new_tty].row;
+  current_tty = new_tty;
+  terminal_setcursor();
+}
+
 void terminal_putentryat(char c, uint8_t color, size_t x, size_t y) {
   const size_t index = y * VGA_WIDTH + x;
   terminal_buffer[index] = vga_entry(c, color);
 }
 
+void terminal_scroll() {
+  for (size_t line = 0; line < VGA_HEIGHT - 1; line++) {
+    memcpy(&terminal_buffer[line * VGA_WIDTH],
+           &terminal_buffer[(line + 1) * VGA_WIDTH], VGA_WIDTH);
+  }
+  for (size_t x = 0; x < VGA_WIDTH; x++) {
+    terminal_putentryat(' ', terminal_color, x, VGA_HEIGHT - 1);
+  }
+}
+
 void terminal_linebreak(void) {
-  if (++terminal_row == VGA_HEIGHT)
-    terminal_row = 0;
+  if (terminal_row == VGA_HEIGHT - 1)
+    terminal_scroll();
+  else
+    terminal_row++;
   terminal_column = 0;
 }
 
@@ -63,8 +92,12 @@ void terminal_putchar(char c) {
     terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
     if (++terminal_column == VGA_WIDTH) {
       terminal_column = 0;
-      if (++terminal_row == VGA_HEIGHT)
-        terminal_row = 0;
+      if (++terminal_row == VGA_HEIGHT) {
+        terminal_scroll();
+        terminal_row = VGA_HEIGHT - 1;
+      }
+      // if (++terminal_row == VGA_HEIGHT)
+      //   terminal_row = 0;
     }
   }
   terminal_setcursor();
@@ -77,6 +110,14 @@ void terminal_write(const char *data, size_t size) {
 
 void terminal_writestring(const char *str) { terminal_write(str, strlen(str)); }
 
+void ttys_initialize(void) {
+  for (size_t i = 0; i < n_tty; i++) {
+    memcpy(&(ttys[i].buffer), VGA_MEMORY, VGA_WIDTH * VGA_HEIGHT);
+    ttys[i].col = 0;
+    ttys[i].row = 0;
+  }
+}
+
 void terminal_initialize(void) {
   terminal_row = 0;
   terminal_column = 0;
@@ -87,6 +128,7 @@ void terminal_initialize(void) {
       terminal_putentryat(' ', terminal_color, x, y);
     }
   }
+  ttys_initialize();
 }
 
 uint16_t keyboard_poll() {
@@ -105,10 +147,20 @@ uint16_t keyboard_poll() {
 }
 
 char handle_key(uint16_t keycode) {
+  char ch;
   switch (keycode) {
+  case KEY_LEFT_CTRL_PRESS:
+    ctrl_pressed = 1;
+    break;
+  case KEY_LEFT_CTRL_RELEASE:
+    ctrl_pressed = 0;
+    break;
   case KEY_UP_ARROW:
+    // terminal_switch(current_tty + 1);
     break;
   case KEY_DOWN_ARROW:
+    // terminal_switch(current_tty - 1);
+    terminal_scroll();
     break;
   case KEY_LEFT_ARROW:
     if (terminal_column > 0) {
@@ -117,10 +169,18 @@ char handle_key(uint16_t keycode) {
     }
     break;
   case KEY_RIGHT_ARROW:
+    if (terminal_column < VGA_WIDTH - 1)
+      terminal_column++;
+    terminal_setcursor();
     break;
   default:
-    if (keycode < 0x100 && keycode < sizeof(keycode_to_ascii))
-      return keycode_to_ascii[keycode];
+    if (keycode < 0x100 && keycode < sizeof(keycode_to_ascii)) {
+      ch = keycode_to_ascii[keycode];
+      if ((ch >= '1' && ch <= '9') && ctrl_pressed)
+        terminal_switch(ch - '0' - 1);
+      else
+        return ch;
+    }
     break;
   }
   return 0;
