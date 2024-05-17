@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "com.h"
@@ -88,17 +89,39 @@ void terminal_initialize(void) {
   }
 }
 
-uint8_t keyboard_poll() {
-  while (1) {
-    if (inb(KBD_STATUS_PORT) & KBD_STATUS_OBF) {
-      return inb(KBD_DATA_PORT);
-    }
+uint16_t keyboard_poll() {
+  uint8_t byte1 = 0, byte2 = 0;
+  while (!(inb(KBD_STATUS_PORT) & KBD_STATUS_OBF))
+    ;
+  byte1 = inb(KBD_DATA_PORT);
+  if (byte1 == 0xE0) {
+    while (!(inb(KBD_STATUS_PORT) & KBD_STATUS_OBF))
+      ;
+    byte2 = inb(KBD_DATA_PORT);
+    return (byte1 << 8) | byte2;
+  } else {
+    return byte1;
   }
 }
 
-char keycode_to_char(uint8_t keycode) {
-  if (keycode < sizeof(keycode_to_ascii)) {
-    return keycode_to_ascii[keycode];
+char handle_key(uint16_t keycode) {
+  switch (keycode) {
+  case KEY_UP_ARROW:
+    break;
+  case KEY_DOWN_ARROW:
+    break;
+  case KEY_LEFT_ARROW:
+    if (terminal_column > 0) {
+      terminal_column--;
+      terminal_setcursor();
+    }
+    break;
+  case KEY_RIGHT_ARROW:
+    break;
+  default:
+    if (keycode < 0x100 && keycode < sizeof(keycode_to_ascii))
+      return keycode_to_ascii[keycode];
+    break;
   }
   return 0;
 }
