@@ -1,8 +1,10 @@
 # Define the cross compiler tools
 HOST=$(shell ./default-host.sh)
+CROSS_DIR=cross
+XCC=$(shell realpath $(CROSS_DIR)/bin/$(HOST)-gcc)
 AR=$(HOST)-ar
 AS=$(HOST)-as
-CC=$(HOST)-gcc --sysroot=$(PWD)/sysroot
+CC=$(XCC) --sysroot=$(PWD)/sysroot
 
 # Directories
 PREFIX=/usr
@@ -28,9 +30,12 @@ MAKE=make
 .PHONY: all
 all: build
 
+$(XCC):
+	make -C $(CROSS_DIR)
+
 # Build target
 .PHONY: build
-build: headers
+build: headers $(XCC)
 	@for PROJECT in $(PROJECTS); do \
 		(cd $$PROJECT && CC="$(CC)" DESTDIR="$(SYSROOT)" SYSROOT="$(SYSROOT)" $(MAKE) install); \
 	done
