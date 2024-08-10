@@ -65,7 +65,7 @@ $(ISO): build
 	echo 'menuentry "ofs" {' > $(ISODIR)/boot/grub/grub.cfg
 	echo '  multiboot /boot/ofs.kernel' >> $(ISODIR)/boot/grub/grub.cfg
 	echo '}' >> $(ISODIR)/boot/grub/grub.cfg
-	grub2-mkrescue -o ofs.iso $(ISODIR)
+	grub2-mkrescue --compress=xz --modules="multiboot" -o ofs.iso $(ISODIR)
 
 # Run in QEMU
 .PHONY: qemu
