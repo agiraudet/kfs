@@ -1,0 +1,6 @@
+*.iso
+isodir
+sysroot
+opt
+envsetup.sh
+tmp
